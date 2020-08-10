@@ -3,6 +3,7 @@ const PDFMerge = require('easy-pdf-merge')
 const { join } = require('path')
 const { dev } = require('vuepress')
 const { fs, logger, chalk } = require('@vuepress/shared-utils')
+const { cpuUsage } = require('process')
 const { red, yellow, gray } = chalk
 
 // Keep silent before running custom command.
@@ -34,8 +35,9 @@ module.exports = (opts = {}, ctx) => ({
           try {
             await generatePDF(nCtx, {
               port: nCtx.devProcess.port,
-              host: nCtx.devProcess.host,
-              sorter: opts.sorter
+              host: nCtx.devProcess.displayHost,
+              sorter: opts.sorter,
+              page: opts.page
             })
           } catch (error) {
             console.error(red(error))
@@ -53,6 +55,7 @@ async function generatePDF(ctx, {
   port,
   host,
   sorter,
+  page
 }) {
   const { pages, tempPath, siteConfig } = ctx
   const tempDir = join(tempPath, 'pdf')
@@ -63,7 +66,7 @@ async function generatePDF(ctx, {
   if (typeof sorter === 'function') {
     exportPages = exportPages.sort(sorter)
   }
-
+  
   exportPages = exportPages.map(page => {
     return {
       url: page.path,
@@ -89,10 +92,7 @@ async function generatePDF(ctx, {
       { waitUntil: 'networkidle2' }
     )
 
-    await browserPage.pdf({
-      path: pagePath,
-      format: 'A4'
-    })
+    await browserPage.pdf(Object.assign({}, { path: pagePath }, page))
 
     logger.success(`Generated ${yellow(title)} ${gray(`${url}`)}`)
   }
